@@ -1,15 +1,16 @@
 import React, { useId, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Theme, Button, Badge, Dialog, Select, TextField, IconButton } from '@radix-ui/themes';
-import { ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, ClipboardList, Flag, Globe2, Heart, Plus, Printer, Search, ShieldCheck, SlidersHorizontal, Sparkles, Users, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, Clock3, ClipboardList, Flag, Globe2, Heart, Plus, Search, ShieldCheck, SlidersHorizontal, Sparkles, Users } from 'lucide-react';
 import '@radix-ui/themes/styles.css';
 import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/manrope';
 import './style.css';
 import { exercises, categories, filterExercises } from './exercises.js';
-import { defaultFilters, normalizeFilters, normalizeIds, storageKeys } from './storage.js';
+import { defaultFilters, normalizeFilters, normalizeIds, normalizeTrainings, storageKeys } from './storage.js';
 import { useStoredState, useSystemDarkMode } from './hooks.js';
 import InstallApp from './InstallApp.jsx';
+import MyTrainings from './MyTrainings.jsx';
 
 const emptyIds = [];
 
@@ -88,11 +89,10 @@ function App() {
   const [filters, setFilters, filtersError] = useStoredState(storageKeys.filters, defaultFilters, normalizeFilters);
   const [plan, setPlan, planError] = useStoredState(storageKeys.plan, emptyIds, normalizeIds);
   const [favorites, setFavorites, favoritesError] = useStoredState(storageKeys.favorites, emptyIds, normalizeIds);
+  const [trainings, setTrainings, trainingsError] = useStoredState(storageKeys.trainings, emptyIds, normalizeTrainings);
   const [planOpen, setPlanOpen] = useState(false);
   const { age, category, favoritesOnly } = filters;
-  const storageError = planError || favoritesError || filtersError;
-  const selected = plan.map(id => exercises.find(e => e.id === id));
-  const total = selected.reduce((sum, exercise) => sum + exercise.minutes, 0);
+  const storageError = planError || favoritesError || filtersError || trainingsError;
   const filtered = filterExercises(exercises, query.trim(), age, category).filter(e => !favoritesOnly || favorites.includes(e.id));
 
   function togglePlan(id) { setPlan(old => old.includes(id) ? old.filter(value => value !== id) : [...old, id]); }
@@ -104,7 +104,7 @@ function App() {
     <a className="skip" href="#ovelser">Hopp til øvelsene</a>
     <header className="header">
       <a href="#" className="brand"><img src="/ball.svg" alt="" width="36" height="36" />fotballbanken<span className="demo-tag">DEMO</span></a>
-      <nav aria-label="Hovedmeny"><a className="nav-active" href="#ovelser">Øvelsesbanken</a><Button variant="soft" size="3" onClick={() => setPlanOpen(true)}><ClipboardList size={17} />Min trening <span className="count">{plan.length}</span></Button></nav>
+      <nav aria-label="Hovedmeny"><a className="nav-active" href="#ovelser">Øvelsesbanken</a><Button variant="soft" size="3" onClick={() => setPlanOpen(true)}><ClipboardList size={17} />Mine treninger <span className="count">{trainings.length}</span></Button></nav>
     </header>
 
     <main>
@@ -140,7 +140,7 @@ function App() {
           <button className="favorites-filter" aria-pressed={favoritesOnly} onClick={() => updateFilter('favoritesOnly', !favoritesOnly)}><Heart size={13} fill={favoritesOnly ? 'currentColor' : 'none'} />Mine favoritter<span>{favorites.length}</span></button>
         </div>
         <p className="result-count" aria-live="polite">Viser {filtered.length} {favoritesOnly ? 'favorittøvelser' : 'øvelser'}{age !== 'Alle aldre' ? ` for ${age}–${Number(age) + 2} år` : ' for små og store fotballføtter'}</p>
-        {storageError && <p className="storage-warning" role="status">Nettleseren tillater ikke lokal lagring. Favoritter, filtre og trening beholdes bare til du lukker siden.</p>}
+        {storageError && <p className="storage-warning" role="status">Nettleseren tillater ikke lokal lagring. Favoritter, filtre og treninger beholdes bare til du lukker siden.</p>}
         <div className="exercise-grid">{filtered.map(exercise => <ExerciseCard key={exercise.id} exercise={exercise} inPlan={plan.includes(exercise.id)} favorite={favorites.includes(exercise.id)} onTogglePlan={() => togglePlan(exercise.id)} onToggleFavorite={() => toggleFavorite(exercise.id)} />)}</div>
         {!filtered.length && <div className="empty">{favoritesOnly ? <Heart size={30} /> : <Search size={30} />}<h3>{favoritesOnly && favorites.length === 0 ? 'Samle dine favorittøvelser' : 'Ingen øvelser akkurat her'}</h3><p>{favoritesOnly && favorites.length === 0 ? 'Trykk på hjertet på et øvelseskort. Favorittene lagres på denne enheten.' : 'Prøv et annet søkeord, en annen aldersgruppe eller vis alle øvelser.'}</p><Button onClick={reset}>Vis alle øvelser</Button></div>}
       </section>
@@ -151,19 +151,7 @@ function App() {
     </main>
     <footer><a className="brand" href="#"><img src="/ball.svg" alt="" width="25" height="25" />fotballbanken</a><p>Et lite konsept. Mye spilleglede.</p><span>Øvelsene er veiledende, ikke et offisielt treningsprogram.</span></footer>
 
-    <Dialog.Root open={planOpen} onOpenChange={setPlanOpen}><Dialog.Content maxWidth="600px" className="plan-dialog">
-      <Dialog.Title>Min trening</Dialog.Title><Dialog.Description>Din lille kampplan for en god dag på banen.</Dialog.Description>
-      {selected.length ? <>
-        <div className="plan-summary"><strong>{total} min</strong><span>{selected.length} øvelser · legg til pauser etter behov</span></div>
-        <div className="plan-items">{selected.map((exercise, index) => <div className="plan-item" key={exercise.id}>
-          <span className="plan-number">{index + 1}</span><div><strong>{exercise.title}</strong><small>{exercise.category} · {exercise.minutes} min</small>
-            <div className="print-instructions"><p>Utstyr: {exercise.equipment}</p><ol>{exercise.steps.map(step => <li key={step}>{step}</li>)}</ol><p>Tips: {exercise.tip}</p></div>
-          </div><IconButton variant="ghost" color="gray" onClick={() => togglePlan(exercise.id)} aria-label={`Fjern ${exercise.title}`}><X size={18} /></IconButton>
-        </div>)}</div>
-        <p className="storage-note">{storageError ? 'Lokal lagring er ikke tilgjengelig. Planen beholdes bare til du lukker siden.' : 'Trening, favoritter og filtre lagres automatisk i denne nettleseren. Ingen konto nødvendig.'}</p>
-      </> : <div className="empty"><ClipboardList size={36} /><h3>En god trening starter med én øvelse</h3><p>Trykk «Legg til» på øvelsene du vil ha med.</p></div>}
-      <div className="dialog-actions"><Dialog.Close><Button color="gray" variant="soft">{selected.length ? 'Fortsett å utforske' : 'Finn øvelser'}<ChevronRight size={15} /></Button></Dialog.Close>{selected.length > 0 && <Button onClick={() => window.print()}><Printer size={16} />Skriv ut trening</Button>}</div>
-    </Dialog.Content></Dialog.Root>
+    <MyTrainings open={planOpen} onOpenChange={setPlanOpen} plan={plan} setPlan={setPlan} trainings={trainings} setTrainings={setTrainings} storageError={storageError} Pitch={Pitch} />
   </Theme>;
 }
 

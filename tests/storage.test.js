@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultFilters, normalizeFilters, normalizeIds, readStored, storageKeys } from '../src/storage.js';
+import { defaultFilters, normalizeFilters, normalizeIds, normalizeTrainings, readStored, storageKeys } from '../src/storage.js';
 import { exercises, filterExercises } from '../src/exercises.js';
 
 test('keeps the original training plan storage key during migration', () => {
@@ -41,4 +41,29 @@ test('search is case insensitive and filters combine with favorites', () => {
 test('exercise data has valid unique IDs and positive durations', () => {
   assert.equal(new Set(exercises.map(e => e.id)).size, exercises.length);
   assert.ok(exercises.every(e => e.minutes > 0 && e.steps.length > 0 && e.age[0] <= e.age[1]));
+});
+
+test('saves multiple named training sessions with their own ordered exercises and progress', () => {
+  const input = [
+    { id: 'a', name: '  Mandagstrening  ', exerciseIds: ['porter', 'haien', 'porter', 'missing'], completedIds: ['haien', 'missing'], createdAt: '2026-11-16T16:00:00.000Z' },
+    { id: 'b', name: 'Torsdag', exerciseIds: ['smaaspill'], completedIds: ['smaaspill', 'smaaspill'] },
+  ];
+  assert.deepEqual(normalizeTrainings(input), [
+    { id: 'a', name: 'Mandagstrening', exerciseIds: ['porter', 'haien'], completedIds: ['haien'], createdAt: '2026-11-16T16:00:00.000Z' },
+    { id: 'b', name: 'Torsdag', exerciseIds: ['smaaspill'], completedIds: ['smaaspill'], createdAt: null },
+  ]);
+});
+
+test('ignores invalid or duplicated training sessions, without touching the working plan', () => {
+  const input = [
+    null,
+    { id: 'empty', name: 'Ingen øvelser', exerciseIds: ['missing'] },
+    { id: 'ok', name: 'Trygg', exerciseIds: ['haien'] },
+    { id: 'ok', name: 'Duplikat', exerciseIds: ['porter'] },
+    { id: 'no-name', name: ' ', exerciseIds: ['porter'] },
+  ];
+  assert.deepEqual(normalizeTrainings(input).map(t => t.id), ['ok']);
+  assert.deepEqual(normalizeTrainings({}), []);
+  assert.deepEqual(readStored({ getItem: () => JSON.stringify(input) }, storageKeys.trainings, [], normalizeTrainings).map(t => t.id), ['ok']);
+  assert.equal(storageKeys.plan, 'fotballbanken-plan-v1');
 });
