@@ -25,7 +25,7 @@
 .storage-warning{padding:13px 16px;background:#fff0d4;color:#78551d;border-radius:8px;font-size:12px;line-height:1.7}
 .hosting>a{display:flex;align-items:center;gap:7px;margin-left:auto;font-size:9px;letter-spacing:1px;white-space:nowrap;color:#234ccd}
 .hosting>a:hover{text-decoration:underline}
-.radix-themes.dark{--color-background:#121823;--accent-9:#819dff;--accent-10:#98afff;color:#e3e9f4}
+.radix-themes.dark{--color-background:#121823;--accent-9:#819dff;--accent-10:#98afff;--accent-contrast:#101b37;color:#e3e9f4}
 .dark .hero-copy>p,.dark .hero-meta,.dark .library-count,.dark .result-count,.dark .card-body>p,.dark .card-meta,.dark .bottom-note p,.dark .install-heading p,.dark .storage-note,.dark .plan-summary span,.dark .plan-item small,.dark .offline-status{color:#9eacc1}
 .dark .muted,.dark .card-category{color:#9aaac2}
 .dark h1 span,.dark .hero-meta svg,.dark .hosting>a{color:#9ab0ff}
